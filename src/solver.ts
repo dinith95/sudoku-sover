@@ -27,6 +27,16 @@ function fits(g: Grid, i: number, v: number): boolean {
   return true;
 }
 
+/** Returns the 9 values of the given row (0-8); 0 marks an empty cell. */
+export function existsInRow(g: Grid, row: number, num: number): boolean {
+  return g.slice(row * SIZE, (row + 1) * SIZE).includes(num);
+}
+
+/** Returns true if `num` already appears in the given column (0-8). */
+export function existsInColumn(g: Grid, col: number, num: number): boolean {
+  return g.filter((_, i) => i % SIZE === col).includes(num);
+}
+
 export function hasConflict(g: Grid): boolean {
   return g.some((v, i) => v !== 0 && !fits(g, i, v));
 }
