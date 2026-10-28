@@ -3,6 +3,27 @@ export type Grid = number[];
 export const SIZE = 9;
 export const CELLS = SIZE * SIZE;
 
+/** Maps box number (0-8, row-major) to the 9 flat cell indices it contains. */
+export const BOX_INDICES: Record<number, number[]> = (() => {
+  const boxes: Record<number, number[]> = {};
+  for (let b = 0; b < SIZE; b++) {
+    let i = Math.floor(b / 3) * 27 + (b % 3) * 3; // first cell of the box
+    boxes[b] = [];
+    for (let n = 0; n < SIZE; n++) {
+      boxes[b].push(i);
+      if (n % 3 === 2) {
+        // 3rd cell of a box row: move past it (1) and skip the other 6 cells
+        // of the grid row, landing on the first cell of the next box row
+        i += 1 + 6;
+      } else {
+        // 1st or 2nd cell: just move to the neighbour on the right
+        i += 1;
+      }
+    }
+  }
+  return boxes;
+})();
+
 export function emptyGrid(): Grid {
   return new Array(CELLS).fill(0);
 }
