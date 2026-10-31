@@ -215,12 +215,26 @@ export function hasConflict(g: Grid): boolean {
 /** Returns a solved copy of the grid, or null if there is no solution. */
 export function solve(given: Grid): Grid | null {
   let g = given.slice();
-  for (let i = 0; i < 3; i++) {
-    // const box = findMostOccupiedBox(g);
-    // if (box === -1) break; // every box is full
-    // g = solveInsideBox(g, box);
-    //solveInsideColumn(g, i);
-    solveInsideRow(g, i);
-  }
+  // const box = findMostOccupiedBox(g);
+  // if (box === -1) break; // every box is full
+  // g = solveInsideBox(g, box);
+  //solveInsideColumn(g, i);
+
+  // Sweep every row until the grid is full or a whole sweep fills no new cell.
+  let before: string;
+  do {
+    before = g.join();
+
+    for (let row = 0; row < SIZE; row++) {
+      solveInsideRow(g, row);
+    }
+
+    for (let col = 0; col < SIZE; col++) {
+      solveInsideColumn(g, col);
+    }
+    for (let box = 0; box < SIZE; box++) {
+      g = solveInsideBox(g, box);
+    }
+  } while (g.includes(0) && g.join() !== before);
   return g;
 }
