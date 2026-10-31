@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { KeyboardEvent, useRef, useState } from 'react';
 import './App.scss';
 import { CELLS, SIZE, emptyGrid, hasConflict, solve, twoMissingPerBoxGrid } from './solver';
 
@@ -20,6 +20,7 @@ function App() {
   const [grid, setGrid] = useState<number[]>(twoMissingPerBoxGrid);
   const [solved, setSolved] = useState<boolean[]>(() => new Array(CELLS).fill(false));
   const [message, setMessage] = useState(HINT);
+  const cellRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const clearSolved = () => setSolved(new Array(CELLS).fill(false));
 
@@ -32,6 +33,18 @@ function App() {
     });
     clearSolved();
     setMessage(HINT);
+  };
+
+  const handleKeyDown = (i: number, e: KeyboardEvent<HTMLInputElement>) => {
+    const r = Math.floor(i / SIZE);
+    const c = i % SIZE;
+    let next = -1;
+    if (e.key === 'ArrowUp' && r > 0) next = i - SIZE;
+    else if (e.key === 'ArrowDown' && r < SIZE - 1) next = i + SIZE;
+    else if (e.key === 'ArrowLeft' && c > 0) next = i - 1;
+    else if (e.key === 'ArrowRight' && c < SIZE - 1) next = i + 1;
+    if (e.key.startsWith('Arrow')) e.preventDefault();
+    if (next >= 0) cellRefs.current[next]?.focus();
   };
 
   const handleSolve = () => {
@@ -65,6 +78,7 @@ function App() {
         {grid.map((value, i) => (
           <input
             key={i}
+            ref={(el) => { cellRefs.current[i] = el; }}
             className={cellClass(i, solved[i])}
             type="text"
             inputMode="numeric"
@@ -73,6 +87,8 @@ function App() {
             aria-label={`Row ${Math.floor(i / SIZE) + 1}, column ${(i % SIZE) + 1}`}
             value={value ? String(value) : ''}
             onChange={(e) => handleChange(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(i, e)}
+            onFocus={(e) => e.target.select()}
           />
         ))}
       </div>
