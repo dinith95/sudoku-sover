@@ -13,7 +13,7 @@ test('solves a puzzle and resets the board', () => {
   expect(cell(1, 1).value).toBe('5');
   expect(cell(9, 9).value).not.toBe('');
 
-  userEvent.click(screen.getByRole('button', { name: 'Reset' }));
+  userEvent.click(screen.getByRole('button', { name: 'Reset board' }));
   expect(cell(1, 1).value).toBe('');
   expect(cell(9, 9).value).toBe('');
 });

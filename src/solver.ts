@@ -188,6 +188,11 @@ export function hasConflict(g: Grid): boolean {
   return g.some((v, i) => v !== 0 && !fits(g, i, v));
 }
 
+/** Returns how many filled cells clash with another cell in their row, column or box. */
+export function conflictCount(g: Grid): number {
+  return g.filter((v, i) => v !== 0 && !fits(g, i, v)).length;
+}
+
 // Backtracking, always filling the cell with the fewest candidates first.
 // function search(g: Grid): boolean {
 //   let best = -1;
