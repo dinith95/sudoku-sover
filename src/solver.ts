@@ -28,6 +28,27 @@ export function emptyGrid(): Grid {
   return new Array(CELLS).fill(0);
 }
 
+const SAMPLE_SOLUTION =
+  '534678912' +
+  '672195348' +
+  '198342567' +
+  '859761423' +
+  '426853791' +
+  '713924856' +
+  '961537284' +
+  '287419635' +
+  '345286179';
+
+/** A valid grid where every box is missing exactly 2 values: its top-left and centre cells are empty. */
+export function twoMissingPerBoxGrid(): Grid {
+  const grid = SAMPLE_SOLUTION.split('').map(Number);
+  for (let b = 0; b < SIZE; b++) {
+    grid[BOX_INDICES[b][0]] = 0;
+    grid[BOX_INDICES[b][4]] = 0;
+  }
+  return grid;
+}
+
 function fits(g: Grid, i: number, v: number): boolean {
   const r = Math.floor(i / SIZE);
   const c = i % SIZE;
@@ -58,12 +79,18 @@ export function existsInColumn(g: Grid, col: number, num: number): boolean {
   return g.filter((_, i) => i % SIZE === col).includes(num);
 }
 
-/** Returns the box number (0-8) with the fewest empty cells; ties go to the lowest box. */
+/**
+ * Returns the box number (0-8) with the fewest empty cells, skipping boxes that are already full;
+ * ties go to the lowest box. Returns -1 if every box is full.
+ */
 export function findMostOccupiedBox(grid: Grid): number {
-  let best = 0;
+  let best = -1;
   let fewestZeros = SIZE + 1;
   for (let b = 0; b < SIZE; b++) {
     const zeros = BOX_INDICES[b].filter((i) => grid[i] === 0).length;
+    if (zeros === 0){
+      continue; // box is completely filled, nothing left to solve
+    }
     if (zeros < fewestZeros) {
       fewestZeros = zeros;
       best = b;
@@ -89,7 +116,9 @@ export function solveCell(grid: Grid, box: number): Grid {
       if (boxValues.includes(v)) continue; // only the missing values are candidates
       if (!existsInRow(g, row, v) && !existsInColumn(g, col, v)) suitable.push(v);
     }
-    if (suitable.length === 1) g[cell] = suitable[0]; // all other values are not suitable
+    if (suitable.length === 1) {
+      g[cell] = suitable[0]; // all other values are not suitable
+    }
   });
   return g;
 }
@@ -135,7 +164,11 @@ function search(g: Grid): boolean {
 
 /** Returns a solved copy of the grid, or null if there is no solution. */
 export function solve(given: Grid): Grid | null {
-  var box = findMostOccupiedBox(given);
-  var g = solveInsideBox(given, box);
+  let g = given;
+  for (let i = 0; i < 3; i++) {
+    const box = findMostOccupiedBox(g);
+    if (box === -1) break; // every box is full
+    g = solveInsideBox(g, box);
+  }
   return g;
 }

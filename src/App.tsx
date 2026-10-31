@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import './App.scss';
-import { CELLS, SIZE, emptyGrid, hasConflict, solve } from './solver';
+import { CELLS, SIZE, emptyGrid, hasConflict, solve, twoMissingPerBoxGrid } from './solver';
 
 const HINT = 'Enter the numbers you know, then press Solve.';
 
@@ -17,7 +17,7 @@ function cellClass(i: number, solved: boolean): string {
 }
 
 function App() {
-  const [grid, setGrid] = useState<number[]>(emptyGrid);
+  const [grid, setGrid] = useState<number[]>(twoMissingPerBoxGrid);
   const [solved, setSolved] = useState<boolean[]>(() => new Array(CELLS).fill(false));
   const [message, setMessage] = useState(HINT);
 
