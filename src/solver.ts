@@ -123,6 +123,56 @@ export function solveCell(grid: Grid, box: number): Grid {
   return g;
 }
 
+/**
+ * Fills, in place, every empty cell of column `col` (0-8) that has exactly one suitable value.
+ * The candidates are the values missing from the column; a candidate is suitable for a cell when it is not
+ * already in the cell's row, and it is placed only if every other candidate is not suitable there.
+ */
+export function solveInsideColumn(grid: Grid, col: number): void {
+  for (let row = 0; row < SIZE; row++) {
+    const cell = row * SIZE + col;
+    if (grid[cell] !== 0) continue; // ignore existing values
+
+    const suitable: number[] = [];
+
+    for (let v = 1; v <= SIZE; v++) {
+      if (existsInColumn(grid, col, v)) {
+        continue; // only the missing values are candidates
+      }
+      if (!existsInRow(grid, row, v)) suitable.push(v);
+    }
+
+    if (suitable.length === 1) {
+      grid[cell] = suitable[0]; // all other candidates already exist in the row
+    }
+  }
+}
+
+/**
+ * Fills, in place, every empty cell of row `row` (0-8) that has exactly one suitable value.
+ * The candidates are the values missing from the row; a candidate is suitable for a cell when it is not
+ * already in the cell's column, and it is placed only if every other candidate is not suitable there.
+ */
+export function solveInsideRow(grid: Grid, row: number): void {
+  for (let col = 0; col < SIZE; col++) {
+    const cell = row * SIZE + col;
+    if (grid[cell] !== 0) continue; // ignore existing values
+
+    const suitable: number[] = [];
+
+    for (let v = 1; v <= SIZE; v++) {
+      if (existsInRow(grid, row, v)) {
+        continue; // only the missing values are candidates
+      }
+      if (!existsInColumn(grid, col, v)) suitable.push(v);
+    }
+
+    if (suitable.length === 1) {
+      grid[cell] = suitable[0]; // all other candidates already exist in the column
+    }
+  }
+}
+
 /** Repeats solveCell on `box` until no more empty cells in it can be filled; returns a copy of the grid. */
 export function solveInsideBox(grid: Grid, box: number): Grid {
   let current = grid;
@@ -164,11 +214,13 @@ export function hasConflict(g: Grid): boolean {
 
 /** Returns a solved copy of the grid, or null if there is no solution. */
 export function solve(given: Grid): Grid | null {
-  let g = given;
+  let g = given.slice();
   for (let i = 0; i < 3; i++) {
-    const box = findMostOccupiedBox(g);
-    if (box === -1) break; // every box is full
-    g = solveInsideBox(g, box);
+    // const box = findMostOccupiedBox(g);
+    // if (box === -1) break; // every box is full
+    // g = solveInsideBox(g, box);
+    //solveInsideColumn(g, i);
+    solveInsideRow(g, i);
   }
   return g;
 }
