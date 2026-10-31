@@ -219,6 +219,13 @@ export function conflictCount(g: Grid): number {
 
 /** Returns a solved copy of the grid, or null if there is no solution. */
 export function solve(given: Grid): Grid | null {
+  return solveWithStats(given).grid;
+}
+
+/** Like `solve`, but also returns how many cells each iteration filled. */
+export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: number[] } {
+  const filledPerIteration: number[] = [];
+  const empties = (grid: Grid) => grid.filter((v) => v === 0).length;
   let g = given.slice();
   // const box = findMostOccupiedBox(g);
   // if (box === -1) break; // every box is full
@@ -229,6 +236,7 @@ export function solve(given: Grid): Grid | null {
   let before: string;
   do {
     before = g.join();
+    const emptyBefore = empties(g);
 
     for (let row = 0; row < SIZE; row++) {
       solveInsideRow(g, row);
@@ -240,6 +248,7 @@ export function solve(given: Grid): Grid | null {
     for (let box = 0; box < SIZE; box++) {
       g = solveInsideBox(g, box);
     }
+    filledPerIteration.push(emptyBefore - empties(g));
   } while (g.includes(0) && g.join() !== before);
-  return g;
+  return { grid: g, filledPerIteration };
 }

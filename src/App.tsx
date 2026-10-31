@@ -7,7 +7,7 @@ import {
   conflictCount,
   emptyGrid,
   hasConflict,
-  solve,
+  solveWithStats,
   twoMissingPerBoxGrid,
 } from './solver';
 
@@ -16,6 +16,16 @@ const DIGITS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 /** Where a cell's value came from: the starting puzzle, the user, or the solver. */
 type Source = 'given' | 'entered' | 'solved';
+
+/** What the solve log shows about the last run. */
+interface SolveRun {
+  solved: boolean;
+  at: string;
+  ms: number;
+  filledPerIteration: number[];
+}
+
+const formatMs = (ms: number) => (ms < 10 ? ms.toFixed(2) : ms.toFixed(1));
 
 const boxOf = (i: number) => Math.floor(i / 27) * 3 + Math.floor((i % SIZE) / 3);
 
@@ -42,11 +52,59 @@ const BackspaceIcon = () => (
   </svg>
 );
 
+function SolveLog({ run }: { run: SolveRun }) {
+  const iterations = run.filledPerIteration;
+  const total = iterations.reduce((a, b) => a + b, 0);
+  const most = Math.max(1, ...iterations);
+  return (
+    <div className="log-body">
+      <div className="log-summary">
+        <p className="log-result">
+          <span className={`dot${run.solved ? '' : ' stuck'}`} aria-hidden="true" />
+          <strong>{run.solved ? 'Solved' : 'Stuck'}</strong>
+          <span>Last run · {run.at}</span>
+        </p>
+        <dl className="log-stats">
+          <div>
+            <dt>Execution time</dt>
+            <dd>{formatMs(run.ms)}<small> ms</small></dd>
+          </div>
+          <div>
+            <dt>Iterations</dt>
+            <dd>{iterations.length}</dd>
+          </div>
+          <div>
+            <dt>Cells filled</dt>
+            <dd className="filled">{total}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="log-iterations">
+        <h3>Cells filled per iteration</h3>
+        <ol>
+          {iterations.map((filled, n) => (
+            <li key={n}>
+              <span className="iter">Iteration {n + 1}</span>
+              <span className="bar" aria-hidden="true">
+                <span style={{ width: `${(filled / most) * 100}%` }} />
+              </span>
+              <span className="count">{filled}</span>
+            </li>
+          ))}
+        </ol>
+        <p className="log-note">Each iteration sweeps rows, then columns, then boxes.</p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [grid, setGrid] = useState<number[]>(twoMissingPerBoxGrid);
   const [sources, setSources] = useState<Source[]>(() => grid.map(() => 'given'));
   const [message, setMessage] = useState(HINT);
   const [selected, setSelected] = useState(-1);
+  const [lastRun, setLastRun] = useState<SolveRun | null>(null);
   const cellRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const empty = grid.filter((v) => v === 0).length;
@@ -97,14 +155,14 @@ function App() {
       setMessage('Two numbers clash in a row, column or box.');
       return;
     }
-    const result = solve(grid);
-    if (!result) {
-      setMessage('No solution exists for this puzzle.');
-      return;
-    }
+    const start = performance.now();
+    const { grid: result, filledPerIteration } = solveWithStats(grid);
+    const ms = performance.now() - start;
+    const solved = !result.includes(0);
     setSources(sources.map((s, i) => (grid[i] === 0 && result[i] !== 0 ? 'solved' : s)));
     setGrid(result);
-    setMessage(result.includes(0) ? 'Got stuck — some cells are still empty.' : 'Solved.');
+    setMessage(solved ? 'Solved.' : 'Got stuck — some cells are still empty.');
+    setLastRun({ solved, at: new Date().toLocaleTimeString(), ms, filledPerIteration });
   };
 
   const handleReset = () => {
@@ -165,12 +223,16 @@ function App() {
           <div className="panel-group">
             <h2 className="label">Number</h2>
             <div className="pad">
-              {DIGITS.map((d) => (
-                <button key={d} type="button" aria-label={`Enter ${d}`} onClick={() => handlePad(d)}>
-                  {d}
-                  <span className="left">{SIZE - grid.filter((v) => v === d).length} left</span>
-                </button>
-              ))}
+              {DIGITS.map((d) => {
+                const left = SIZE - grid.filter((v) => v === d).length;
+                return (
+                  <button key={d} type="button" className={left === 0 ? 'done' : undefined}
+                    aria-label={`Enter ${d}`} onClick={() => handlePad(d)}>
+                    {d}
+                    <span className="left">{left} left</span>
+                  </button>
+                );
+              })}
               <button type="button" className="clear" aria-label="Clear cell" onClick={() => handlePad(0)}>
                 <BackspaceIcon />
                 <span className="clear-text">Clear cell</span>
@@ -191,6 +253,20 @@ function App() {
           </div>
         </aside>
       </div>
+
+      <section className="log" aria-labelledby="log-title">
+        <div className="log-head">
+          <h2 id="log-title" className="label">Solve log</h2>
+          {lastRun && (
+            <button type="button" className="clear-log" onClick={() => setLastRun(null)}>Clear log</button>
+          )}
+        </div>
+        {lastRun ? (
+          <SolveLog run={lastRun} />
+        ) : (
+          <p className="log-empty">Press Solve to see the execution time and iterations.</p>
+        )}
+      </section>
     </main>
   );
 }
