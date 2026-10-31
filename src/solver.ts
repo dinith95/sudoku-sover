@@ -58,6 +58,53 @@ export function existsInColumn(g: Grid, col: number, num: number): boolean {
   return g.filter((_, i) => i % SIZE === col).includes(num);
 }
 
+/** Returns the box number (0-8) with the fewest empty cells; ties go to the lowest box. */
+export function findMostOccupiedBox(grid: Grid): number {
+  let best = 0;
+  let fewestZeros = SIZE + 1;
+  for (let b = 0; b < SIZE; b++) {
+    const zeros = BOX_INDICES[b].filter((i) => grid[i] === 0).length;
+    if (zeros < fewestZeros) {
+      fewestZeros = zeros;
+      best = b;
+    }
+  }
+  return best;
+}
+
+/**
+ * Fills every empty cell of `box` (0-8) that has exactly one suitable value and returns a copy of the grid.
+ * Existing box values are ignored; a missing value is suitable for a cell when it is not already in the
+ * cell's row or column, and it is placed only if every other missing value is not suitable there.
+ */
+export function solveCell(grid: Grid, box: number): Grid {
+  const g = grid.slice();
+  BOX_INDICES[box].forEach((cell) => {
+    if (g[cell] !== 0) return; // ignore existing values
+    const row = Math.floor(cell / SIZE);
+    const col = cell % SIZE;
+    const boxValues = BOX_INDICES[box].map((i) => g[i]);
+    const suitable: number[] = [];
+    for (let v = 1; v <= SIZE; v++) {
+      if (boxValues.includes(v)) continue; // only the missing values are candidates
+      if (!existsInRow(g, row, v) && !existsInColumn(g, col, v)) suitable.push(v);
+    }
+    if (suitable.length === 1) g[cell] = suitable[0]; // all other values are not suitable
+  });
+  return g;
+}
+
+/** Repeats solveCell on `box` until no more empty cells in it can be filled; returns a copy of the grid. */
+export function solveInsideBox(grid: Grid, box: number): Grid {
+  let current = grid;
+  let next = solveCell(current, box);
+  while (next.join() !== current.join()) {
+    current = next;
+    next = solveCell(current, box);
+  }
+  return next;
+}
+
 export function hasConflict(g: Grid): boolean {
   return g.some((v, i) => v !== 0 && !fits(g, i, v));
 }
@@ -88,6 +135,7 @@ function search(g: Grid): boolean {
 
 /** Returns a solved copy of the grid, or null if there is no solution. */
 export function solve(given: Grid): Grid | null {
-  const g = given.slice();
-  return search(g) ? g : null;
+  var box = findMostOccupiedBox(given);
+  var g = solveInsideBox(given, box);
+  return g;
 }
