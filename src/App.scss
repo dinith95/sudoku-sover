@@ -124,6 +124,36 @@ $display: 'Space Grotesk', Inter, sans-serif;
   background: $grid-line;
 }
 
+.cell-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+// Suitable numbers for an empty cell: one is shown big, two small, three or more stay blank.
+.cands {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-family: $display;
+  font-variant-numeric: tabular-nums;
+
+  &.single {
+    font-size: clamp(18px, 4.5vw, 26px);
+    font-weight: 700;
+    color: $accent;
+  }
+
+  &.pair {
+    font-size: clamp(11px, 2.8vw, 16px);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: $muted;
+  }
+}
+
 .cell {
   width: 100%;
   height: 100%;

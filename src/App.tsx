@@ -1,9 +1,11 @@
-import { KeyboardEvent, useRef, useState } from 'react';
+import { KeyboardEvent, useMemo, useRef, useState } from 'react';
 import './App.scss';
 import {
   BOX_INDICES,
   CELLS,
+  Grid,
   SIZE,
+  candidatesFor,
   conflictCount,
   emptyGrid,
   hasConflict,
@@ -100,20 +102,21 @@ function SolveLog({ run }: { run: SolveRun }) {
 }
 
 function App() {
-  const [grid, setGrid] = useState<number[]>(twoMissingPerBoxGrid);
+  const [grid, setGrid] = useState<Grid>(twoMissingPerBoxGrid);
   const [sources, setSources] = useState<Source[]>(() => grid.map(() => 'given'));
   const [message, setMessage] = useState(HINT);
   const [selected, setSelected] = useState(-1);
   const [lastRun, setLastRun] = useState<SolveRun | null>(null);
   const cellRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const empty = grid.filter((v) => v === 0).length;
+  const candidates = useMemo(() => grid.map((_, i) => candidatesFor(grid, i)), [grid]);
+  const empty = grid.filter((c) => c.value === 0).length;
   const conflicts = conflictCount(grid);
 
   const setCell = (i: number, digit: number) => {
     setGrid((prev) => {
       const next = prev.slice();
-      next[i] = digit;
+      next[i] = { value: digit };
       return next;
     });
     setSources((prev) => {
@@ -158,8 +161,8 @@ function App() {
     const start = performance.now();
     const { grid: result, filledPerIteration } = solveWithStats(grid);
     const ms = performance.now() - start;
-    const solved = !result.includes(0);
-    setSources(sources.map((s, i) => (grid[i] === 0 && result[i] !== 0 ? 'solved' : s)));
+    const solved = !result.some((c) => c.value === 0);
+    setSources(sources.map((s, i) => (grid[i].value === 0 && result[i].value !== 0 ? 'solved' : s)));
     setGrid(result);
     setMessage(solved ? 'Solved.' : 'Got stuck — some cells are still empty.');
     setLastRun({ solved, at: new Date().toLocaleTimeString(), ms, filledPerIteration });
@@ -190,25 +193,32 @@ function App() {
           <div className="grid">
             {Object.values(BOX_INDICES).map((cells, b) => (
               <div className="box" key={b}>
-                {cells.map((i) => (
-                  <input
-                    key={i}
-                    ref={(el) => { cellRefs.current[i] = el; }}
-                    className={cellClass(i, sources[i], selected)}
-                    type="text"
-                    inputMode="numeric"
-                    maxLength={1}
-                    autoComplete="off"
-                    aria-label={`Row ${Math.floor(i / SIZE) + 1}, column ${(i % SIZE) + 1}`}
-                    value={grid[i] ? String(grid[i]) : ''}
-                    onChange={(e) => handleChange(i, e.target.value)}
-                    onKeyDown={(e) => handleKeyDown(i, e)}
-                    onFocus={(e) => {
-                      setSelected(i);
-                      e.target.select();
-                    }}
-                  />
-                ))}
+                {cells.map((i) => {
+                  const cands = candidates[i];
+                  const hint = cands.length === 1 ? 'single' : cands.length === 2 ? 'pair' : '';
+                  const where = `Row ${Math.floor(i / SIZE) + 1}, column ${(i % SIZE) + 1}`;
+                  return (
+                    <div className="cell-wrap" key={i}>
+                      <input
+                        ref={(el) => { cellRefs.current[i] = el; }}
+                        className={cellClass(i, sources[i], selected)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        autoComplete="off"
+                        aria-label={hint ? `${where}, candidates ${cands.join(', ')}` : where}
+                        value={grid[i].value ? String(grid[i].value) : ''}
+                        onChange={(e) => handleChange(i, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(i, e)}
+                        onFocus={(e) => {
+                          setSelected(i);
+                          e.target.select();
+                        }}
+                      />
+                      {hint && <span className={`cands ${hint}`} aria-hidden="true">{cands.join(' ')}</span>}
+                    </div>
+                  );
+                })}
               </div>
             ))}
           </div>
@@ -224,7 +234,7 @@ function App() {
             <h2 className="label">Number</h2>
             <div className="pad">
               {DIGITS.map((d) => {
-                const left = SIZE - grid.filter((v) => v === d).length;
+                const left = SIZE - grid.filter((c) => c.value === d).length;
                 return (
                   <button key={d} type="button" className={left === 0 ? 'done' : undefined}
                     aria-label={`Enter ${d}`} onClick={() => handlePad(d)}>

@@ -1,4 +1,23 @@
-export type Grid = number[];
+/** One square of the board; `value` is 1-9, or 0 when the cell is empty. */
+export interface Cell {
+  value: number;
+}
+
+export type Grid = Cell[];
+
+export function gridFromValues(values: number[]): Grid {
+  return values.map((value) => ({ value }));
+}
+
+/** Returns a deep copy: the cells themselves are copied, not shared. */
+export function cloneGrid(g: Grid): Grid {
+  return g.map((c) => ({ ...c }));
+}
+
+/** A string that is equal for two grids exactly when every cell has the same value. */
+export function gridKey(g: Grid): string {
+  return g.map((c) => c.value).join();
+}
 
 export const SIZE = 9;
 export const CELLS = SIZE * SIZE;
@@ -25,7 +44,7 @@ export const BOX_INDICES: Record<number, number[]> = (() => {
 })();
 
 export function emptyGrid(): Grid {
-  return new Array(CELLS).fill(0);
+  return gridFromValues(new Array(CELLS).fill(0));
 }
 
 const SAMPLE_SOLUTION =
@@ -41,10 +60,10 @@ const SAMPLE_SOLUTION =
 
 /** A valid grid where every box is missing exactly 2 values: its top-left and centre cells are empty. */
 export function twoMissingPerBoxGrid(): Grid {
-  const grid = SAMPLE_SOLUTION.split('').map(Number);
+  const grid = gridFromValues(SAMPLE_SOLUTION.split('').map(Number));
   for (let b = 0; b < SIZE; b++) {
-    grid[BOX_INDICES[b][0]] = 0;
-    grid[BOX_INDICES[b][4]] = 0;
+    grid[BOX_INDICES[b][0]].value = 0;
+    grid[BOX_INDICES[b][4]].value = 0;
   }
   return grid;
 }
@@ -55,28 +74,36 @@ function fits(g: Grid, i: number, v: number): boolean {
   for (let k = 0; k < SIZE; k++) {
     const a = r * SIZE + k;
     const b = k * SIZE + c;
-    if (a !== i && g[a] === v) return false;
-    if (b !== i && g[b] === v) return false;
+    if (a !== i && g[a].value === v) return false;
+    if (b !== i && g[b].value === v) return false;
   }
   const br = r - (r % 3);
   const bc = c - (c % 3);
   for (let y = 0; y < 3; y++) {
     for (let x = 0; x < 3; x++) {
       const j = (br + y) * SIZE + bc + x;
-      if (j !== i && g[j] === v) return false;
+      if (j !== i && g[j].value === v) return false;
     }
   }
   return true;
 }
 
+/** The digits that can legally go in cell `i`; empty for a filled cell. */
+export function candidatesFor(g: Grid, i: number): number[] {
+  if (g[i].value !== 0) return [];
+  const out: number[] = [];
+  for (let v = 1; v <= SIZE; v++) if (fits(g, i, v)) out.push(v);
+  return out;
+}
+
 /** Returns the 9 values of the given row (0-8); 0 marks an empty cell. */
 export function existsInRow(g: Grid, row: number, num: number): boolean {
-  return g.slice(row * SIZE, (row + 1) * SIZE).includes(num);
+  return g.slice(row * SIZE, (row + 1) * SIZE).some((c) => c.value === num);
 }
 
 /** Returns true if `num` already appears in the given column (0-8). */
 export function existsInColumn(g: Grid, col: number, num: number): boolean {
-  return g.filter((_, i) => i % SIZE === col).includes(num);
+  return g.some((c, i) => i % SIZE === col && c.value === num);
 }
 
 /**
@@ -87,7 +114,7 @@ export function findMostOccupiedBox(grid: Grid): number {
   let best = -1;
   let fewestZeros = SIZE + 1;
   for (let b = 0; b < SIZE; b++) {
-    const zeros = BOX_INDICES[b].filter((i) => grid[i] === 0).length;
+    const zeros = BOX_INDICES[b].filter((i) => grid[i].value === 0).length;
     if (zeros === 0){
       continue; // box is completely filled, nothing left to solve
     }
@@ -105,19 +132,19 @@ export function findMostOccupiedBox(grid: Grid): number {
  * cell's row or column, and it is placed only if every other missing value is not suitable there.
  */
 export function solveCell(grid: Grid, box: number): Grid {
-  const g = grid.slice();
+  const g = cloneGrid(grid);
   BOX_INDICES[box].forEach((cell) => {
-    if (g[cell] !== 0) return; // ignore existing values
+    if (g[cell].value !== 0) return; // ignore existing values
     const row = Math.floor(cell / SIZE);
     const col = cell % SIZE;
-    const boxValues = BOX_INDICES[box].map((i) => g[i]);
+    const boxValues = BOX_INDICES[box].map((i) => g[i].value);
     const suitable: number[] = [];
     for (let v = 1; v <= SIZE; v++) {
       if (boxValues.includes(v)) continue; // only the missing values are candidates
       if (!existsInRow(g, row, v) && !existsInColumn(g, col, v)) suitable.push(v);
     }
     if (suitable.length === 1) {
-      g[cell] = suitable[0]; // all other values are not suitable
+      g[cell].value = suitable[0]; // all other values are not suitable
     }
   });
   return g;
@@ -131,7 +158,7 @@ export function solveCell(grid: Grid, box: number): Grid {
 export function solveInsideColumn(grid: Grid, col: number): void {
   for (let row = 0; row < SIZE; row++) {
     const cell = row * SIZE + col;
-    if (grid[cell] !== 0) continue; // ignore existing values
+    if (grid[cell].value !== 0) continue; // ignore existing values
 
     const suitable: number[] = [];
 
@@ -143,7 +170,7 @@ export function solveInsideColumn(grid: Grid, col: number): void {
     }
 
     if (suitable.length === 1) {
-      grid[cell] = suitable[0]; // all other candidates already exist in the row
+      grid[cell].value = suitable[0]; // all other candidates already exist in the row
     }
   }
 }
@@ -156,7 +183,7 @@ export function solveInsideColumn(grid: Grid, col: number): void {
 export function solveInsideRow(grid: Grid, row: number): void {
   for (let col = 0; col < SIZE; col++) {
     const cell = row * SIZE + col;
-    if (grid[cell] !== 0) continue; // ignore existing values
+    if (grid[cell].value !== 0) continue; // ignore existing values
 
     const suitable: number[] = [];
 
@@ -168,7 +195,7 @@ export function solveInsideRow(grid: Grid, row: number): void {
     }
 
     if (suitable.length === 1) {
-      grid[cell] = suitable[0]; // all other candidates already exist in the column
+      grid[cell].value = suitable[0]; // all other candidates already exist in the column
     }
   }
 }
@@ -177,7 +204,7 @@ export function solveInsideRow(grid: Grid, row: number): void {
 export function solveInsideBox(grid: Grid, box: number): Grid {
   let current = grid;
   let next = solveCell(current, box);
-  while (next.join() !== current.join()) {
+  while (gridKey(next) !== gridKey(current)) {
     current = next;
     next = solveCell(current, box);
   }
@@ -185,37 +212,13 @@ export function solveInsideBox(grid: Grid, box: number): Grid {
 }
 
 export function hasConflict(g: Grid): boolean {
-  return g.some((v, i) => v !== 0 && !fits(g, i, v));
+  return g.some((c, i) => c.value !== 0 && !fits(g, i, c.value));
 }
 
 /** Returns how many filled cells clash with another cell in their row, column or box. */
 export function conflictCount(g: Grid): number {
-  return g.filter((v, i) => v !== 0 && !fits(g, i, v)).length;
+  return g.filter((c, i) => c.value !== 0 && !fits(g, i, c.value)).length;
 }
-
-// Backtracking, always filling the cell with the fewest candidates first.
-// function search(g: Grid): boolean {
-//   let best = -1;
-//   let bestOpts: number[] | null = null;
-//   for (let i = 0; i < CELLS; i++) {
-//     if (g[i]) continue;
-//     const opts: number[] = [];
-//     for (let v = 1; v <= SIZE; v++) if (fits(g, i, v)) opts.push(v);
-//     if (opts.length === 0) return false;
-//     if (!bestOpts || opts.length < bestOpts.length) {
-//       best = i;
-//       bestOpts = opts;
-//     }
-//     if (opts.length === 1) break;
-//   }
-//   if (!bestOpts) return true;
-//   for (const v of bestOpts) {
-//     g[best] = v;
-//     if (search(g)) return true;
-//   }
-//   g[best] = 0;
-//   return false;
-// }
 
 /** Returns a solved copy of the grid, or null if there is no solution. */
 export function solve(given: Grid): Grid | null {
@@ -225,8 +228,8 @@ export function solve(given: Grid): Grid | null {
 /** Like `solve`, but also returns how many cells each iteration filled. */
 export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: number[] } {
   const filledPerIteration: number[] = [];
-  const empties = (grid: Grid) => grid.filter((v) => v === 0).length;
-  let g = given.slice();
+  const empties = (grid: Grid) => grid.filter((c) => c.value === 0).length;
+  let g = cloneGrid(given);
   // const box = findMostOccupiedBox(g);
   // if (box === -1) break; // every box is full
   // g = solveInsideBox(g, box);
@@ -235,7 +238,7 @@ export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: n
   // Sweep every row until the grid is full or a whole sweep fills no new cell.
   let before: string;
   do {
-    before = g.join();
+    before = gridKey(g);
     const emptyBefore = empties(g);
 
     for (let row = 0; row < SIZE; row++) {
@@ -249,6 +252,6 @@ export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: n
       g = solveInsideBox(g, box);
     }
     filledPerIteration.push(emptyBefore - empties(g));
-  } while (g.includes(0) && g.join() !== before);
+  } while (g.some((c) => c.value === 0) && gridKey(g) !== before);
   return { grid: g, filledPerIteration };
 }
