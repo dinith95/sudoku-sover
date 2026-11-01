@@ -165,19 +165,22 @@ export function solveCell(grid: Grid, box: number): Grid {
 export function solveInsideColumn(grid: Grid, col: number): void {
   for (let row = 0; row < SIZE; row++) {
     const cell = row * SIZE + col;
-    if (grid[cell].value !== 0) continue; // ignore existing values
 
-    const suitable: number[] = [];
-
-    for (let v = 1; v <= SIZE; v++) {
-      if (existsInColumn(grid, col, v)) {
-        continue; // only the missing values are candidates
-      }
-      if (!existsInRow(grid, row, v)) suitable.push(v);
+    if (grid[cell].value !== 0) {
+      grid[cell].candidates = [];
+      continue; // ignore existing values
     }
 
+    // Drop candidates already in the column (placed earlier in this sweep) or in the row.
+    const suitable = grid[cell].candidates.filter(
+      (v) => !existsInColumn(grid, col, v) && !existsInRow(grid, row, v),
+    );
+    
+    grid[cell].candidates = suitable;
+
     if (suitable.length === 1) {
-      grid[cell].value = suitable[0]; // all other candidates already exist in the row
+      grid[cell].value = suitable[0]; // all other candidates exist in the row
+      grid[cell].candidates = [];
     }
   }
 }
@@ -190,21 +193,22 @@ export function solveInsideColumn(grid: Grid, col: number): void {
 export function solveInsideRow(grid: Grid, row: number): void {
   for (let col = 0; col < SIZE; col++) {
     const cell = row * SIZE + col;
-    if (grid[cell].value !== 0) continue; // ignore existing values
 
-    const suitable: number[] = [];
-
-    for (let v = 1; v <= SIZE; v++) {
-      if (existsInRow(grid, row, v)) {
-        continue; // only the missing values are candidates
-      }
-      if (!existsInColumn(grid, col, v)) {
-        suitable.push(v);
-      }
+    if (grid[cell].value !== 0) {
+      grid[cell].candidates = [];
+      continue; // ignore existing values
     }
 
+    // Drop candidates already in the row (placed earlier in this sweep) or in the column.
+    const suitable = grid[cell].candidates.filter(
+      (v) => !existsInRow(grid, row, v) && !existsInColumn(grid, col, v),
+    );
+
+    grid[cell].candidates = suitable;
+
     if (suitable.length === 1) {
-      grid[cell].value = suitable[0]; // all other candidates already exist in the column
+      grid[cell].value = suitable[0]; // all other candidates exist in the column
+      grid[cell].candidates = [];
     }
   }
 }
@@ -239,10 +243,15 @@ export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: n
   const filledPerIteration: number[] = [];
   const empties = (grid: Grid) => grid.filter((c) => c.value === 0).length;
   let g = cloneGrid(given);
-  // const box = findMostOccupiedBox(g);
-  // if (box === -1) break; // every box is full
-  // g = solveInsideBox(g, box);
-  //solveInsideColumn(g, i);
+
+  // Reset the candidates before solving. An empty cell (value 0) could still be any digit, so it starts
+  // with all of 1-9; solveInsideRow and solveInsideColumn then remove the digits that clash.
+  // A filled cell has nothing left to decide, so its candidates are empty.
+  const allDigits = Array.from({ length: SIZE }, (_, k) => k + 1);
+  g.forEach((cell) => {
+    const isEmpty = cell.value === 0;
+    cell.candidates = isEmpty ? allDigits.slice() : [];
+  });
 
   // Sweep every row until the grid is full or a whole sweep fills no new cell.
   let before: string;
