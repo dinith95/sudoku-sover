@@ -1,17 +1,24 @@
 /** One square of the board; `value` is 1-9, or 0 when the cell is empty. */
 export interface Cell {
   value: number;
+  /** The digits that can legally go in this cell; empty for a filled cell. */
+  candidates: number[];
 }
 
 export type Grid = Cell[];
 
 export function gridFromValues(values: number[]): Grid {
-  return values.map((value) => ({ value }));
+  return refreshCandidates(values.map((value) => ({ value, candidates: [] })));
 }
 
 /** Returns a deep copy: the cells themselves are copied, not shared. */
 export function cloneGrid(g: Grid): Grid {
-  return g.map((c) => ({ ...c }));
+  return g.map((c) => ({ ...c, candidates: c.candidates.slice() }));
+}
+
+/** Returns a copy of the grid with every cell's candidates recomputed from the current values. */
+export function refreshCandidates(g: Grid): Grid {
+  return g.map((c, i) => ({ ...c, candidates: candidatesFor(g, i) }));
 }
 
 /** A string that is equal for two grids exactly when every cell has the same value. */
@@ -65,7 +72,7 @@ export function twoMissingPerBoxGrid(): Grid {
     grid[BOX_INDICES[b][0]].value = 0;
     grid[BOX_INDICES[b][4]].value = 0;
   }
-  return grid;
+  return refreshCandidates(grid);
 }
 
 function fits(g: Grid, i: number, v: number): boolean {
@@ -191,7 +198,9 @@ export function solveInsideRow(grid: Grid, row: number): void {
       if (existsInRow(grid, row, v)) {
         continue; // only the missing values are candidates
       }
-      if (!existsInColumn(grid, col, v)) suitable.push(v);
+      if (!existsInColumn(grid, col, v)) {
+        suitable.push(v);
+      }
     }
 
     if (suitable.length === 1) {
@@ -253,5 +262,5 @@ export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: n
     }
     filledPerIteration.push(emptyBefore - empties(g));
   } while (g.some((c) => c.value === 0) && gridKey(g) !== before);
-  return { grid: g, filledPerIteration };
+  return { grid: refreshCandidates(g), filledPerIteration };
 }

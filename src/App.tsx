@@ -1,14 +1,14 @@
-import { KeyboardEvent, useMemo, useRef, useState } from 'react';
+import { KeyboardEvent, useRef, useState } from 'react';
 import './App.scss';
 import {
   BOX_INDICES,
   CELLS,
   Grid,
   SIZE,
-  candidatesFor,
   conflictCount,
   emptyGrid,
   hasConflict,
+  refreshCandidates,
   solveWithStats,
   twoMissingPerBoxGrid,
 } from './solver';
@@ -109,15 +109,14 @@ function App() {
   const [lastRun, setLastRun] = useState<SolveRun | null>(null);
   const cellRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  const candidates = useMemo(() => grid.map((_, i) => candidatesFor(grid, i)), [grid]);
   const empty = grid.filter((c) => c.value === 0).length;
   const conflicts = conflictCount(grid);
 
   const setCell = (i: number, digit: number) => {
     setGrid((prev) => {
       const next = prev.slice();
-      next[i] = { value: digit };
-      return next;
+      next[i] = { ...prev[i], value: digit };
+      return refreshCandidates(next);
     });
     setSources((prev) => {
       const next = prev.slice();
@@ -194,7 +193,7 @@ function App() {
             {Object.values(BOX_INDICES).map((cells, b) => (
               <div className="box" key={b}>
                 {cells.map((i) => {
-                  const cands = candidates[i];
+                  const cands = grid[i].candidates;
                   const hint = cands.length === 1 ? 'single' : cands.length === 2 ? 'pair' : '';
                   const where = `Row ${Math.floor(i / SIZE) + 1}, column ${(i % SIZE) + 1}`;
                   return (
