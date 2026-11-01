@@ -138,23 +138,29 @@ export function findMostOccupiedBox(grid: Grid): number {
  * Existing box values are ignored; a missing value is suitable for a cell when it is not already in the
  * cell's row or column, and it is placed only if every other missing value is not suitable there.
  */
-export function solveCell(grid: Grid, box: number): Grid {
-  const g = cloneGrid(grid);
+export function solveCell(grid: Grid, box: number){
+ 
   BOX_INDICES[box].forEach((cell) => {
-    if (g[cell].value !== 0) return; // ignore existing values
+
+    if (grid[cell].value !== 0) {
+      grid[cell].candidates = [];
+      return; // ignore existing values
+    }
+
     const row = Math.floor(cell / SIZE);
     const col = cell % SIZE;
-    const boxValues = BOX_INDICES[box].map((i) => g[i].value);
-    const suitable: number[] = [];
-    for (let v = 1; v <= SIZE; v++) {
-      if (boxValues.includes(v)) continue; // only the missing values are candidates
-      if (!existsInRow(g, row, v) && !existsInColumn(g, col, v)) suitable.push(v);
-    }
+    const boxValues = BOX_INDICES[box].map((i) => grid[i].value);
+    // Drop candidates already in the box, the row or the column.
+    const suitable = grid[cell].candidates.filter(
+      (v) => !boxValues.includes(v) && !existsInRow(grid, row, v) && !existsInColumn(grid, col, v),
+    );
+    grid[cell].candidates = suitable;
+
     if (suitable.length === 1) {
-      g[cell].value = suitable[0]; // all other values are not suitable
+      grid[cell].value = suitable[0]; // all other candidates are not suitable
+      grid[cell].candidates = [];
     }
   });
-  return g;
 }
 
 /**
@@ -214,14 +220,15 @@ export function solveInsideRow(grid: Grid, row: number): void {
 }
 
 /** Repeats solveCell on `box` until no more empty cells in it can be filled; returns a copy of the grid. */
-export function solveInsideBox(grid: Grid, box: number): Grid {
-  let current = grid;
-  let next = solveCell(current, box);
-  while (gridKey(next) !== gridKey(current)) {
-    current = next;
-    next = solveCell(current, box);
+export function solveInsideBox(grid: Grid, box: number){
+  let before = gridKey(grid);
+
+  solveCell(grid, box);
+
+  while (before !== gridKey(grid)) {
+    before = gridKey(grid);
+    solveCell(grid, box);
   }
-  return next;
 }
 
 export function hasConflict(g: Grid): boolean {
@@ -267,7 +274,7 @@ export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: n
       solveInsideColumn(g, col);
     }
     for (let box = 0; box < SIZE; box++) {
-      g = solveInsideBox(g, box);
+      solveInsideBox(g, box);
     }
     filledPerIteration.push(emptyBefore - empties(g));
   } while (g.some((c) => c.value === 0) && gridKey(g) !== before);
