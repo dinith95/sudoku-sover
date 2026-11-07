@@ -77,32 +77,10 @@ export function existsInColumn(g: Grid, col: number, num: number): boolean {
 }
 
 /**
- * Returns the box number (0-8) with the fewest empty cells, skipping boxes that are already full;
- * ties go to the lowest box. Returns -1 if every box is full.
+ * Fills, in place, every empty cell of `box` (0-8) that has exactly one candidate left.
+ * Each empty cell's candidates drop any digit already in its box, row or column.
  */
-export function findMostOccupiedBox(grid: Grid): number {
-  let best = -1;
-  let fewestZeros = SIZE + 1;
-  for (let b = 0; b < SIZE; b++) {
-    const zeros = BOX_INDICES[b].filter((i) => grid[i].value === 0).length;
-    if (zeros === 0){
-      continue; // box is completely filled, nothing left to solve
-    }
-    if (zeros < fewestZeros) {
-      fewestZeros = zeros;
-      best = b;
-    }
-  }
-  return best;
-}
-
-/**
- * Fills every empty cell of `box` (0-8) that has exactly one suitable value and returns a copy of the grid.
- * Existing box values are ignored; a missing value is suitable for a cell when it is not already in the
- * cell's row or column, and it is placed only if every other missing value is not suitable there.
- */
-export function solveCell(grid: Grid, box: number){
- 
+export function solveCell(grid: Grid, box: number): void {
   BOX_INDICES[box].forEach((cell) => {
 
     if (grid[cell].value !== 0) {
@@ -127,9 +105,8 @@ export function solveCell(grid: Grid, box: number){
 }
 
 /**
- * Fills, in place, every empty cell of column `col` (0-8) that has exactly one suitable value.
- * The candidates are the values missing from the column; a candidate is suitable for a cell when it is not
- * already in the cell's row, and it is placed only if every other candidate is not suitable there.
+ * Fills, in place, every empty cell of column `col` (0-8) that has exactly one candidate left.
+ * Each empty cell's candidates drop any digit already in its column or row.
  */
 export function solveInsideColumn(grid: Grid, col: number): void {
   for (let row = 0; row < SIZE; row++) {
@@ -155,9 +132,8 @@ export function solveInsideColumn(grid: Grid, col: number): void {
 }
 
 /**
- * Fills, in place, every empty cell of row `row` (0-8) that has exactly one suitable value.
- * The candidates are the values missing from the row; a candidate is suitable for a cell when it is not
- * already in the cell's column, and it is placed only if every other candidate is not suitable there.
+ * Fills, in place, every empty cell of row `row` (0-8) that has exactly one candidate left.
+ * Each empty cell's candidates drop any digit already in its row or column.
  */
 export function solveInsideRow(grid: Grid, row: number): void {
   for (let col = 0; col < SIZE; col++) {
@@ -182,8 +158,8 @@ export function solveInsideRow(grid: Grid, row: number): void {
   }
 }
 
-/** Repeats solveCell on `box` until no more empty cells in it can be filled; returns a copy of the grid. */
-export function solveInsideBox(grid: Grid, box: number){
+/** Repeats solveCell on `box`, in place, until no more empty cells in it can be filled. */
+export function solveInsideBox(grid: Grid, box: number): void {
   let before = gridKey(grid);
 
   solveCell(grid, box);
@@ -192,16 +168,6 @@ export function solveInsideBox(grid: Grid, box: number){
     before = gridKey(grid);
     solveCell(grid, box);
   }
-}
-
-// /** Returns how many filled cells clash with another cell in their row, column or box. */
-// export function conflictCount(g: Grid): number {
-//   return g.filter((c, i) => c.value !== 0 && !fits(g, i, c.value)).length;
-// }
-
-/** Returns a solved copy of the grid, or null if there is no solution. */
-export function solve(given: Grid): Grid | null {
-  return solveWithStats(given).grid;
 }
 
 /** Like `solve`, but also returns how many cells each iteration filled. */
