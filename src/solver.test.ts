@@ -11,10 +11,10 @@ import {
 function sampleGrid() {
   const g = emptyGrid();
   for (let k = 0; k < SIZE; k++) {
-    g[k] = k + 1; // row 0
-    g[k * SIZE] = k + 1; // column 0
+    g[k].value = k + 1; // row 0
+    g[k * SIZE].value = k + 1; // column 0
   }
-  g[4 * SIZE + 7] = 6; // row 4, column 7
+  g[4 * SIZE + 7].value = 6; // row 4, column 7
   return g;
 }
 
