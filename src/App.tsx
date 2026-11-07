@@ -6,6 +6,7 @@ import {
   Grid,
   SIZE,
   emptyGrid,
+  isValidGrid,
   solveWithStats,
   startingGrid,
 } from './solver';
@@ -152,6 +153,10 @@ function App() {
     const start = performance.now();
     const { grid: result, filledPerIteration } = solveWithStats(grid);
     const ms = performance.now() - start;
+    if (!isValidGrid(result)) {
+      setMessage('Error: the grid has a repeated number in a row, column or box.');
+      return;
+    }
     const solved = !result.some((c) => c.value === 0);
     setSources(sources.map((s, i) => (grid[i].value === 0 && result[i].value !== 0 ? 'solved' : s)));
     setGrid(result);

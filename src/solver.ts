@@ -7,17 +7,17 @@ export interface Cell {
 
 export type Grid = Cell[];
 
-export function gridFromValues(values: number[]): Grid {
+function gridFromValues(values: number[]): Grid {
   return values.map((value) => ({ value, candidates: [] }));
 }
 
 /** Returns a deep copy: the cells themselves are copied, not shared. */
-export function cloneGrid(g: Grid): Grid {
+function cloneGrid(g: Grid): Grid {
   return g.map((c) => ({ ...c, candidates: c.candidates.slice() }));
 }
 
 /** A string that is equal for two grids exactly when every cell has the same value. */
-export function gridKey(g: Grid): string {
+function gridKey(g: Grid): string {
   return g.map((c) => c.value).join();
 }
 
@@ -80,7 +80,7 @@ export function existsInColumn(g: Grid, col: number, num: number): boolean {
  * Fills, in place, every empty cell of `box` (0-8) that has exactly one candidate left.
  * Each empty cell's candidates drop any digit already in its box, row or column.
  */
-export function solveCell(grid: Grid, box: number): void {
+function solveCell(grid: Grid, box: number): void {
   BOX_INDICES[box].forEach((cell) => {
 
     if (grid[cell].value !== 0) {
@@ -108,7 +108,7 @@ export function solveCell(grid: Grid, box: number): void {
  * Fills, in place, every empty cell of column `col` (0-8) that has exactly one candidate left.
  * Each empty cell's candidates drop any digit already in its column or row.
  */
-export function solveInsideColumn(grid: Grid, col: number): void {
+function solveInsideColumn(grid: Grid, col: number): void {
   for (let row = 0; row < SIZE; row++) {
     const cell = row * SIZE + col;
 
@@ -135,7 +135,7 @@ export function solveInsideColumn(grid: Grid, col: number): void {
  * Fills, in place, every empty cell of row `row` (0-8) that has exactly one candidate left.
  * Each empty cell's candidates drop any digit already in its row or column.
  */
-export function solveInsideRow(grid: Grid, row: number): void {
+function solveInsideRow(grid: Grid, row: number): void {
   for (let col = 0; col < SIZE; col++) {
     const cell = row * SIZE + col;
 
@@ -159,7 +159,7 @@ export function solveInsideRow(grid: Grid, row: number): void {
 }
 
 /** Repeats solveCell on `box`, in place, until no more empty cells in it can be filled. */
-export function solveInsideBox(grid: Grid, box: number): void {
+function solveInsideBox(grid: Grid, box: number): void {
   let before = gridKey(grid);
 
   solveCell(grid, box);
@@ -170,7 +170,10 @@ export function solveInsideBox(grid: Grid, box: number): void {
   }
 }
 
-/** Like `solve`, but also returns how many cells each iteration filled. */
+/**
+ * Returns a solved copy of the grid (as far as the row, column and box rules can take it) and how many
+ * cells each iteration filled. Cells left empty keep their remaining candidates.
+ */
 export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: number[] } {
   const filledPerIteration: number[] = [];
   const empties = (grid: Grid) => grid.filter((c) => c.value === 0).length;
@@ -204,4 +207,27 @@ export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: n
     filledPerIteration.push(emptyBefore - empties(g));
   } while (g.some((c) => c.value === 0) && gridKey(g) !== before);
   return { grid: g, filledPerIteration };
+}
+
+/**
+ * Returns true when no row, column or box holds the same digit twice.
+ * Empty cells (0) are ignored, so an unfinished grid can still be valid.
+ */
+export function isValidGrid(g: Grid): boolean {
+  const units: number[][] = [];
+  for (let k = 0; k < SIZE; k++) {
+    units.push(Array.from({ length: SIZE }, (_, n) => k * SIZE + n)); // row k
+    units.push(Array.from({ length: SIZE }, (_, n) => n * SIZE + k)); // column k
+    units.push(BOX_INDICES[k]); // box k
+  }
+  return units.every((unit) => {
+    const seen = new Set<number>();
+    return unit.every((i) => {
+      const value = g[i].value;
+      if (value === 0) return true;
+      if (seen.has(value)) return false; // duplicate in this row, column or box
+      seen.add(value);
+      return true;
+    });
+  });
 }
