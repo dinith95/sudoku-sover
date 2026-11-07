@@ -11,6 +11,7 @@ $box-line: #55585f;
 $accent: #8fa2ff;
 $entered: #f2c78a;
 $clash: #ff9b8f;
+$valid: #6fd69a;
 $display: 'Space Grotesk', Inter, sans-serif;
 
 @mixin focus-ring {
@@ -58,6 +59,17 @@ $display: 'Space Grotesk', Inter, sans-serif;
   font-size: 15px;
   line-height: 20px;
   color: $muted;
+}
+
+.validation {
+  margin: 6px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  color: $valid;
 }
 
 .status {

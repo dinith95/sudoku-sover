@@ -52,6 +52,13 @@ const BackspaceIcon = () => (
   </svg>
 );
 
+const CheckIcon = () => (
+  <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6L9 17l-5-5" />
+  </svg>
+);
+
 function SolveLog({ run }: { run: SolveRun }) {
   const iterations = run.filledPerIteration;
   const total = iterations.reduce((a, b) => a + b, 0);
@@ -103,6 +110,7 @@ function App() {
   const [grid, setGrid] = useState<Grid>(startingGrid);
   const [sources, setSources] = useState<Source[]>(() => grid.map(() => 'given'));
   const [message, setMessage] = useState(HINT);
+  const [validated, setValidated] = useState(false); // the last solve passed the duplicate check
   const [selected, setSelected] = useState(-1);
   const [lastRun, setLastRun] = useState<SolveRun | null>(null);
   const cellRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -120,6 +128,7 @@ function App() {
       next[i] = 'entered';
       return next;
     });
+    setValidated(false); // the board changed, so the last check no longer applies
     setMessage(HINT);
   };
 
@@ -154,12 +163,14 @@ function App() {
     const { grid: result, filledPerIteration } = solveWithStats(grid);
     const ms = performance.now() - start;
     if (!isValidGrid(result)) {
+      setValidated(false);
       setMessage('Error: the grid has a repeated number in a row, column or box.');
       return;
     }
     const solved = !result.some((c) => c.value === 0);
     setSources(sources.map((s, i) => (grid[i].value === 0 && result[i].value !== 0 ? 'solved' : s)));
     setGrid(result);
+    setValidated(true);
     setMessage(solved ? 'Solved.' : 'Got stuck — some cells are still empty.');
     setLastRun({ solved, at: new Date().toLocaleTimeString(), ms, filledPerIteration });
   };
@@ -168,6 +179,7 @@ function App() {
     setGrid(emptyGrid());
     setSources(new Array(CELLS).fill('entered'));
     setSelected(-1);
+    setValidated(false);
     setMessage(HINT);
   };
 
@@ -177,6 +189,12 @@ function App() {
         <div>
           <h1>Sudoku</h1>
           <p className="message" aria-live="polite">{message}</p>
+          {validated && (
+            <p className="validation" role="status">
+              <CheckIcon />
+              Validation successful
+            </p>
+          )}
         </div>
         <p className="status">
           <span className="dot" aria-hidden="true" />
