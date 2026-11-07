@@ -239,6 +239,55 @@ $display: 'Space Grotesk', Inter, sans-serif;
   color: $muted;
 }
 
+.candidates {
+  padding: 16px;
+  border-radius: 12px;
+  background: $surface;
+  gap: 8px;
+
+  p { margin: 0; }
+}
+
+.cand-where {
+  font-family: $display;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.cand-summary {
+  font-size: 14px;
+  color: $soft;
+}
+
+.cand-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.cand {
+  height: 48px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid $line;
+  border-radius: 10px;
+  background: $cell;
+  color: $muted;
+
+  .d { font-family: $display; font-size: 18px; font-weight: 700; line-height: 1.1; }
+  .note { font-size: 11px; font-weight: 500; line-height: 1.2; }
+
+  &.fits {
+    border-color: $accent;
+    background: rgba($accent, 0.22);
+    color: #c7d0ff;
+  }
+}
+
 .pad {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

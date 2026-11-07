@@ -29,6 +29,23 @@ const formatMs = (ms: number) => (ms < 10 ? ms.toFixed(2) : ms.toFixed(1));
 
 const boxOf = (i: number) => Math.floor(i / 27) * 3 + Math.floor((i % SIZE) / 3);
 
+/** Cells sharing a row, column or box with cell `i`, grouped by which of the three they share. */
+function unitsOf(i: number): Record<'row' | 'column' | 'box', number[]> {
+  const row = Math.floor(i / SIZE);
+  const col = i % SIZE;
+  return {
+    row: Array.from({ length: SIZE }, (_, n) => row * SIZE + n),
+    column: Array.from({ length: SIZE }, (_, n) => n * SIZE + col),
+    box: BOX_INDICES[boxOf(i)],
+  };
+}
+
+/** Which unit already holds `digit` for cell `i`, used to explain why a digit is not a candidate. */
+function conflictFor(grid: Grid, i: number, digit: number): 'row' | 'column' | 'box' | null {
+  const units = unitsOf(i);
+  return (['row', 'column', 'box'] as const).find((u) => units[u].some((n) => grid[n].value === digit)) ?? null;
+}
+
 function cellClass(i: number, source: Source, selected: number): string {
   const classes = ['cell', source];
   if (i === selected) classes.push('selected');
@@ -112,15 +129,19 @@ function App() {
   const [message, setMessage] = useState(HINT);
   const [validated, setValidated] = useState(false); // the last solve passed the duplicate check
   const [selected, setSelected] = useState(-1);
+  const [showCandidates, setShowCandidates] = useState(false); // candidates are only known after a solve
   const [lastRun, setLastRun] = useState<SolveRun | null>(null);
   const cellRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const empty = grid.filter((c) => c.value === 0).length;
+  const selectedEmpty = selected >= 0 && grid[selected].value === 0;
+  const selectedCands = selectedEmpty ? grid[selected].candidates : [];
 
   const setCell = (i: number, digit: number) => {
     setGrid((prev) => {
-      const next = prev.slice();
-      next[i] = { ...prev[i], value: digit };
+      // The board changed, so the candidates the solver stored are out of date: drop them until the next solve.
+      const next = prev.map((c) => ({ ...c, candidates: [] }));
+      next[i] = { ...next[i], value: digit };
       return next;
     });
     setSources((prev) => {
@@ -129,6 +150,7 @@ function App() {
       return next;
     });
     setValidated(false); // the board changed, so the last check no longer applies
+    setShowCandidates(false);
     setMessage(HINT);
   };
 
@@ -169,7 +191,8 @@ function App() {
     }
     const solved = !result.some((c) => c.value === 0);
     setSources(sources.map((s, i) => (grid[i].value === 0 && result[i].value !== 0 ? 'solved' : s)));
-    setGrid(result);
+    setGrid(result); // keeps the candidates the solver left on each empty cell
+    setShowCandidates(true);
     setValidated(true);
     setMessage(solved ? 'Solved.' : 'Got stuck — some cells are still empty.');
     setLastRun({ solved, at: new Date().toLocaleTimeString(), ms, filledPerIteration });
@@ -177,6 +200,7 @@ function App() {
 
   const handleReset = () => {
     setGrid(emptyGrid());
+    setShowCandidates(false);
     setSources(new Array(CELLS).fill('entered'));
     setSelected(-1);
     setValidated(false);
@@ -220,7 +244,7 @@ function App() {
                         inputMode="numeric"
                         maxLength={1}
                         autoComplete="off"
-                        aria-label={hint ? `${where}, candidates ${cands.join(', ')}` : where}
+                        aria-label={cands.length ? `${where}, candidates ${cands.join(', ')}` : where}
                         value={grid[i].value ? String(grid[i].value) : ''}
                         onChange={(e) => handleChange(i, e.target.value)}
                         onKeyDown={(e) => handleKeyDown(i, e)}
@@ -262,6 +286,39 @@ function App() {
                 <span className="clear-text">Clear cell</span>
               </button>
             </div>
+          </div>
+
+          <div className="panel-group candidates">
+            <h2 className="label">Selected cell</h2>
+            {selected < 0 ? (
+              <p className="cand-summary">Select a cell to see which numbers fit.</p>
+            ) : (
+              <>
+                <p className="cand-where">Row {Math.floor(selected / SIZE) + 1}, column {(selected % SIZE) + 1}</p>
+                <p className="cand-summary" aria-live="polite">
+                  {!showCandidates && selectedEmpty
+                    ? 'Press Solve to see the candidates.'
+                    : !selectedEmpty
+                    ? `Number ${grid[selected].value}. Nothing to choose.`
+                    : selectedCands.length === 0
+                      ? 'No number fits. Check earlier entries.'
+                      : `${selectedCands.length} ${selectedCands.length === 1 ? 'candidate' : 'candidates'}: ${selectedCands.join(', ')}`}
+                </p>
+                <div className="cand-grid">
+                  {DIGITS.map((d) => {
+                    const why = !selectedEmpty || !showCandidates ? null : conflictFor(grid, selected, d);
+                    const mine = !selectedEmpty && grid[selected].value === d;
+                    const fits = selectedEmpty && showCandidates && !why;
+                    return (
+                      <div key={d} className={`cand${fits ? ' fits' : ''}`}>
+                        <span className="d">{d}</span>
+                        <span className="note">{mine ? 'given' : fits ? 'fits' : why ? `in ${why}` : ''}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="actions">
