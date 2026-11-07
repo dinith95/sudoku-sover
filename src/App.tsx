@@ -5,9 +5,7 @@ import {
   CELLS,
   Grid,
   SIZE,
-  conflictCount,
   emptyGrid,
-  hasConflict,
   solveWithStats,
   startingGrid,
 } from './solver';
@@ -109,7 +107,6 @@ function App() {
   const cellRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const empty = grid.filter((c) => c.value === 0).length;
-  const conflicts = conflictCount(grid);
 
   const setCell = (i: number, digit: number) => {
     setGrid((prev) => {
@@ -152,10 +149,6 @@ function App() {
   };
 
   const handleSolve = () => {
-    if (hasConflict(grid)) {
-      setMessage('Two numbers clash in a row, column or box.');
-      return;
-    }
     const start = performance.now();
     const { grid: result, filledPerIteration } = solveWithStats(grid);
     const ms = performance.now() - start;
@@ -180,9 +173,9 @@ function App() {
           <h1>Sudoku</h1>
           <p className="message" aria-live="polite">{message}</p>
         </div>
-        <p className={`status${conflicts ? ' clash' : ''}`}>
+        <p className="status">
           <span className="dot" aria-hidden="true" />
-          {empty} empty · {conflicts} {conflicts === 1 ? 'conflict' : 'conflicts'}
+          {empty} empty
         </p>
       </header>
 

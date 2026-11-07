@@ -16,11 +16,6 @@ export function cloneGrid(g: Grid): Grid {
   return g.map((c) => ({ ...c, candidates: c.candidates.slice() }));
 }
 
-/** Returns a copy of the grid with every cell's candidates recomputed from the current values. */
-export function refreshCandidates(g: Grid): Grid {
-  return g.map((c, i) => ({ ...c, candidates: candidatesFor(g, i) }));
-}
-
 /** A string that is equal for two grids exactly when every cell has the same value. */
 export function gridKey(g: Grid): string {
   return g.map((c) => c.value).join();
@@ -54,70 +49,21 @@ export function emptyGrid(): Grid {
   return gridFromValues(new Array(CELLS).fill(0));
 }
 
-const SAMPLE_SOLUTION =
-  '534678912' +
-  '672195348' +
-  '198342567' +
-  '859761423' +
-  '426853791' +
-  '713924856' +
-  '961537284' +
-  '287419635' +
-  '345286179';
-
-/** A valid grid where every box is missing exactly 2 values: its top-left and centre cells are empty. */
-export function twoMissingPerBoxGrid(): Grid {
-  const grid = gridFromValues(SAMPLE_SOLUTION.split('').map(Number));
-  for (let b = 0; b < SIZE; b++) {
-    grid[BOX_INDICES[b][0]].value = 0;
-    grid[BOX_INDICES[b][4]].value = 0;
-  }
-  return grid;
-}
-
-const STARTING_PUZZLE = [
-  0, 0, 0, 0, 6, 5, 9, 2, 8,
-  1, 0, 5, 0, 2, 0, 7, 6, 0,
-  0, 0, 2, 8, 0, 0, 0, 0, 0,
-  5, 3, 0, 4, 8, 9, 0, 0, 0,
-  6, 4, 0, 7, 0, 0, 8, 3, 0,
-  0, 0, 7, 0, 1, 0, 0, 4, 9,
-  4, 9, 0, 0, 0, 8, 1, 5, 7,
-  0, 1, 8, 0, 0, 0, 3, 0, 0,
-  0, 0, 0, 0, 9, 1, 2, 0, 0,
+const STARTING_PUZZLE  = [
+  7,4,0, 0,2,0, 5,1,0,
+  0,0,1, 0,6,3, 0,9,2,
+  0,0,0, 0,1,0, 0,0,0,
+  9,0,4, 0,5,0, 0,0,0,
+  0,0,0, 3,0,0, 7,0,0,
+  0,0,0, 0,0,0, 1,6,9,
+  3,0,0, 6,0,0, 0,4,8,
+  4,0,6, 0,0,1, 0,7,5,
+  0,0,0, 5,0,9, 0,0,0
 ];
 
 /** The puzzle the app opens with. */
 export function startingGrid(): Grid {
   return gridFromValues(STARTING_PUZZLE);
-}
-
-function fits(g: Grid, i: number, v: number): boolean {
-  const r = Math.floor(i / SIZE);
-  const c = i % SIZE;
-  for (let k = 0; k < SIZE; k++) {
-    const a = r * SIZE + k;
-    const b = k * SIZE + c;
-    if (a !== i && g[a].value === v) return false;
-    if (b !== i && g[b].value === v) return false;
-  }
-  const br = r - (r % 3);
-  const bc = c - (c % 3);
-  for (let y = 0; y < 3; y++) {
-    for (let x = 0; x < 3; x++) {
-      const j = (br + y) * SIZE + bc + x;
-      if (j !== i && g[j].value === v) return false;
-    }
-  }
-  return true;
-}
-
-/** The digits that can legally go in cell `i`; empty for a filled cell. */
-export function candidatesFor(g: Grid, i: number): number[] {
-  if (g[i].value !== 0) return [];
-  const out: number[] = [];
-  for (let v = 1; v <= SIZE; v++) if (fits(g, i, v)) out.push(v);
-  return out;
 }
 
 /** Returns the 9 values of the given row (0-8); 0 marks an empty cell. */
@@ -248,14 +194,10 @@ export function solveInsideBox(grid: Grid, box: number){
   }
 }
 
-export function hasConflict(g: Grid): boolean {
-  return g.some((c, i) => c.value !== 0 && !fits(g, i, c.value));
-}
-
-/** Returns how many filled cells clash with another cell in their row, column or box. */
-export function conflictCount(g: Grid): number {
-  return g.filter((c, i) => c.value !== 0 && !fits(g, i, c.value)).length;
-}
+// /** Returns how many filled cells clash with another cell in their row, column or box. */
+// export function conflictCount(g: Grid): number {
+//   return g.filter((c, i) => c.value !== 0 && !fits(g, i, c.value)).length;
+// }
 
 /** Returns a solved copy of the grid, or null if there is no solution. */
 export function solve(given: Grid): Grid | null {
@@ -295,5 +237,5 @@ export function solveWithStats(given: Grid): { grid: Grid; filledPerIteration: n
     }
     filledPerIteration.push(emptyBefore - empties(g));
   } while (g.some((c) => c.value === 0) && gridKey(g) !== before);
-  return { grid: refreshCandidates(g), filledPerIteration };
+  return { grid: g, filledPerIteration };
 }
