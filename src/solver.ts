@@ -8,7 +8,7 @@ export interface Cell {
 export type Grid = Cell[];
 
 export function gridFromValues(values: number[]): Grid {
-  return refreshCandidates(values.map((value) => ({ value, candidates: [] })));
+  return values.map((value) => ({ value, candidates: [] }));
 }
 
 /** Returns a deep copy: the cells themselves are copied, not shared. */
@@ -72,7 +72,24 @@ export function twoMissingPerBoxGrid(): Grid {
     grid[BOX_INDICES[b][0]].value = 0;
     grid[BOX_INDICES[b][4]].value = 0;
   }
-  return refreshCandidates(grid);
+  return grid;
+}
+
+const STARTING_PUZZLE = [
+  0, 0, 0, 0, 6, 5, 9, 2, 8,
+  1, 0, 5, 0, 2, 0, 7, 6, 0,
+  0, 0, 2, 8, 0, 0, 0, 0, 0,
+  5, 3, 0, 4, 8, 9, 0, 0, 0,
+  6, 4, 0, 7, 0, 0, 8, 3, 0,
+  0, 0, 7, 0, 1, 0, 0, 4, 9,
+  4, 9, 0, 0, 0, 8, 1, 5, 7,
+  0, 1, 8, 0, 0, 0, 3, 0, 0,
+  0, 0, 0, 0, 9, 1, 2, 0, 0,
+];
+
+/** The puzzle the app opens with. */
+export function startingGrid(): Grid {
+  return gridFromValues(STARTING_PUZZLE);
 }
 
 function fits(g: Grid, i: number, v: number): boolean {

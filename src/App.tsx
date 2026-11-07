@@ -8,9 +8,8 @@ import {
   conflictCount,
   emptyGrid,
   hasConflict,
-  refreshCandidates,
   solveWithStats,
-  twoMissingPerBoxGrid,
+  startingGrid,
 } from './solver';
 
 const HINT = 'Enter the numbers you know, then press Solve.';
@@ -102,7 +101,7 @@ function SolveLog({ run }: { run: SolveRun }) {
 }
 
 function App() {
-  const [grid, setGrid] = useState<Grid>(twoMissingPerBoxGrid);
+  const [grid, setGrid] = useState<Grid>(startingGrid);
   const [sources, setSources] = useState<Source[]>(() => grid.map(() => 'given'));
   const [message, setMessage] = useState(HINT);
   const [selected, setSelected] = useState(-1);
@@ -116,7 +115,7 @@ function App() {
     setGrid((prev) => {
       const next = prev.slice();
       next[i] = { ...prev[i], value: digit };
-      return refreshCandidates(next);
+      return next;
     });
     setSources((prev) => {
       const next = prev.slice();
