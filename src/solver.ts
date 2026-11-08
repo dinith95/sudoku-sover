@@ -49,23 +49,6 @@ export function emptyGrid(): Grid {
   return gridFromValues(new Array(CELLS).fill(0));
 }
 
-const STARTING_PUZZLE = [
-  8,7,1, 0,9,4, 6,0,5,
-  0,4,5, 0,1,3, 2,8,9,
-  0,0,0, 0,8,6, 0,7,0,
-  0,0,0, 0,4,0, 5,0,3,
-  0,3,0, 8,0,0, 0,0,0,
-  5,0,7, 0,0,0, 0,4,2,
-  0,0,0, 0,5,0, 0,2,0,
-  3,0,8, 4,0,0, 9,0,0,
-  0,5,6, 9,7,0, 0,0,0
-];
-
-/** The puzzle the app opens with. */
-export function startingGrid(): Grid {
-  return gridFromValues(STARTING_PUZZLE);
-}
-
 /** Returns the 9 values of the given row (0-8); 0 marks an empty cell. */
 export function existsInRow(g: Grid, row: number, num: number): boolean {
   return g.slice(row * SIZE, (row + 1) * SIZE).some((c) => c.value === num);
@@ -75,6 +58,49 @@ export function existsInRow(g: Grid, row: number, num: number): boolean {
 export function existsInColumn(g: Grid, col: number, num: number): boolean {
   return g.some((c, i) => i % SIZE === col && c.value === num);
 }
+
+/** True if another cell in row `rowNumber` (0-8), apart from column `cellNumber`, lists `candidateValue`. */
+export function canRowPeersHold(grid: Grid, rowNumber: number, cellNumber: number, candidateValue: number): boolean {
+  for (let col = 0; col < SIZE; col++) {
+    const gridNumeber = rowNumber * SIZE + col;
+    if (col !== cellNumber && grid[gridNumeber].candidates.includes(candidateValue)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** True if another cell in column `cellNumber` (0-8), apart from row `rowNumber`, lists `candidateValue`. */
+export function canColumnPeersHold(grid: Grid, rowNumber: number, colNumber: number, candidateValue: number): boolean {
+  
+  for (let row = 0; row < SIZE; row++) {
+    const gridNumber = row * SIZE + colNumber;
+    if (row !== rowNumber && grid[gridNumber].candidates.includes(candidateValue)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** True if another cell in the box of cell (`rowNumber`, `cellNumber`) lists `candidateValue`. */
+export function canBoxPeersHold(grid: Grid, rowNumber: number, cellNumber: number, candidateValue: number): boolean {
+  const index = rowNumber * SIZE + cellNumber;
+  const box = Math.floor(rowNumber / 3) * 3 + Math.floor(cellNumber / 3);
+  return BOX_INDICES[box].some((i) => i !== index && grid[i].candidates.includes(candidateValue));
+}
+
+/**
+ * Returns true only when the row peers, column peers and box peers each still have at least one
+ * other cell that can hold `candidateValue`. False means this cell is the only place for the digit
+ * in its row, column or box. `rowNumber` and `cellNumber` are 0-8 (cellNumber = column).
+ */
+// export function canOtherCellsHold(grid: Grid, rowNumber: number, cellNumber: number, candidateValue: number): boolean {
+//   return (
+//     canRowPeersHold(grid, rowNumber, cellNumber, candidateValue) &&
+//     canColumnPeersHold(grid, rowNumber, cellNumber, candidateValue) &&
+//     canBoxPeersHold(grid, rowNumber, cellNumber, candidateValue)
+//   );
+// }
 
 /**
  * Fills, in place, every empty cell of `box` (0-8) that has exactly one candidate left.
@@ -121,11 +147,20 @@ function solveInsideColumn(grid: Grid, col: number): void {
     const suitable = grid[cell].candidates.filter(
       (v) => !existsInColumn(grid, col, v) && !existsInRow(grid, row, v),
     );
-    
+
     grid[cell].candidates = suitable;
 
-    if (suitable.length === 1) {
-      grid[cell].value = suitable[0]; // all other candidates exist in the row
+    // Hidden single: a candidate that no other cell in this column can hold must go here.
+    if (suitable.length > 1) {
+      const onlyHere = suitable.filter((v) => !canColumnPeersHold(grid, row, col, v));
+      if (onlyHere.length === 1) {
+        grid[cell].candidates = onlyHere; // the only suitable candidate
+      }
+    }
+
+    const remaining = grid[cell].candidates;
+    if (remaining.length === 1) {
+      grid[cell].value = remaining[0]; // all other candidates are ruled out
       grid[cell].candidates = [];
     }
   }
@@ -151,8 +186,17 @@ function solveInsideRow(grid: Grid, row: number): void {
 
     grid[cell].candidates = suitable;
 
-    if (suitable.length === 1) {
-      grid[cell].value = suitable[0]; // all other candidates exist in the column
+    // Hidden single: a candidate that no other cell in this row can hold must go here.
+    if (suitable.length > 1) {
+      const onlyHere = suitable.filter((v) => !canRowPeersHold(grid, row, col, v));
+      if (onlyHere.length === 1) {
+        grid[cell].candidates = onlyHere; // the only suitable candidate
+      }
+    }
+
+    const remaining = grid[cell].candidates;
+    if (remaining.length === 1) {
+      grid[cell].value = remaining[0]; // all other candidates are ruled out
       grid[cell].candidates = [];
     }
   }
