@@ -49,23 +49,6 @@ export function emptyGrid(): Grid {
   return gridFromValues(new Array(CELLS).fill(0));
 }
 
-const STARTING_PUZZLE =  [
-  3,8,2, 0,6,7, 0,9,1,
-  0,0,0, 0,1,3, 2,0,0,
-  0,9,6, 0,4,8, 3,7,5,
-  9,2,0, 0,0,0, 6,5,0,
-  0,0,0, 0,0,6, 0,4,9,
-  0,0,4, 3,0,0, 0,0,0,
-  0,1,9, 7,0,2, 0,0,0,
-  4,3,0, 6,0,0, 0,0,7,
-  0,0,0, 0,0,9, 5,0,0
-];
-
-/** The puzzle the app opens with. */
-export function startingGrid(): Grid {
-  return gridFromValues(STARTING_PUZZLE);
-}
-
 /** Returns the 9 values of the given row (0-8); 0 marks an empty cell. */
 export function existsInRow(g: Grid, row: number, num: number): boolean {
   return g.slice(row * SIZE, (row + 1) * SIZE).some((c) => c.value === num);

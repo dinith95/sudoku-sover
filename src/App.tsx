@@ -8,7 +8,6 @@ import {
   emptyGrid,
   isValidGrid,
   solveWithStats,
-  startingGrid,
 } from './solver';
 
 const HINT = 'Enter the numbers you know, then press Solve.';
@@ -124,7 +123,7 @@ function SolveLog({ run }: { run: SolveRun }) {
 }
 
 function App() {
-  const [grid, setGrid] = useState<Grid>(startingGrid);
+  const [grid, setGrid] = useState<Grid>(emptyGrid);
   const [sources, setSources] = useState<Source[]>(() => grid.map(() => 'given'));
   const [message, setMessage] = useState(HINT);
   const [validated, setValidated] = useState(false); // the last solve passed the duplicate check
