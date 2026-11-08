@@ -88,9 +88,11 @@ export function canRowPeersHold(grid: Grid, rowNumber: number, cellNumber: numbe
 }
 
 /** True if another cell in column `cellNumber` (0-8), apart from row `rowNumber`, lists `candidateValue`. */
-export function canColumnPeersHold(grid: Grid, rowNumber: number, cellNumber: number, candidateValue: number): boolean {
+export function canColumnPeersHold(grid: Grid, rowNumber: number, colNumber: number, candidateValue: number): boolean {
+  
   for (let row = 0; row < SIZE; row++) {
-    if (row !== rowNumber && grid[row * SIZE + cellNumber].candidates.includes(candidateValue)) {
+    const gridNumber = row * SIZE + colNumber;
+    if (row !== rowNumber && grid[gridNumber].candidates.includes(candidateValue)) {
       return true;
     }
   }
@@ -163,14 +165,19 @@ function solveInsideColumn(grid: Grid, col: number): void {
       (v) => !existsInColumn(grid, col, v) && !existsInRow(grid, row, v),
     );
 
-    suitable.forEach(e => {
-      canColumnPeersHold(grid, row, col, e);
-    });
-    
     grid[cell].candidates = suitable;
 
-    if (suitable.length === 1) {
-      grid[cell].value = suitable[0]; // all other candidates exist in the row
+    // Hidden single: a candidate that no other cell in this column can hold must go here.
+    if (suitable.length > 1) {
+      const onlyHere = suitable.filter((v) => !canColumnPeersHold(grid, row, col, v));
+      if (onlyHere.length === 1) {
+        grid[cell].candidates = onlyHere; // the only suitable candidate
+      }
+    }
+
+    const remaining = grid[cell].candidates;
+    if (remaining.length === 1) {
+      grid[cell].value = remaining[0]; // all other candidates are ruled out
       grid[cell].candidates = [];
     }
   }
